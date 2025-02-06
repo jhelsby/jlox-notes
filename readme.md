@@ -1,6 +1,6 @@
 # Crafting Interpreters - JLox Notes
 
-JLox is a simple, dynamically typed, object-oriented tree-walk interpreter built in Java. Its built-in data types are booleans, numbers, strings, and nil. 
+JLox is a simple, dynamically typed, object-oriented tree-walk interpreter built in Java. Its built-in data types are booleans, numbers, strings, and nil.
 
 Everything below lives inside the package `com.craftinginterpreters.lox`.
 
