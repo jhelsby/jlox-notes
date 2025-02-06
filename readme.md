@@ -2,11 +2,13 @@
 
 This repository contains my notes on the _jlox_ interpreter described in [Crafting Interpreters](https://craftinginterpreters.com/) (2021), by Robert Nystrom. Once I complete them, I plan to implement my own interpreter based on _clox_, the book's more efficient C-based interpreter.
 
+_jlox_ and _clox_ interpret the book's language, Lox. Lox is a simple, dynamically typed, object-oriented language. Its built-in data types are booleans, numbers, strings, and nil.
+
 ## jlox
 
-jlox is a dynamically typed, object-oriented tree-walk interpreter built in Java. Its built-in data types are booleans, numbers, strings, and nil.
+jlox is a tree-walk interpreter for Lox built in Java.
 
-All the code described below lives inside the package `com.craftinginterpreters.lox`.
+Unless otherwise stated, the code described below is defined within the package `com.craftinginterpreters.lox`.
 
 1. [Scanning](/scanning.md)
 2. [Representing Code](/representingcode.md)
