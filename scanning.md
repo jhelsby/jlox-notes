@@ -1,4 +1,9 @@
-# Scanning
+# 1. Scanning
+
+In this section, we:
+
+* set up our `main` entrypoint method which allows us to execute jlox code from files or a CLI prompt.
+* implement a scanner which converts this source code into tokens, which will be parsed in future sections - see [2. Representing Code](/representingcode.md).
 
 ## Interpreter Framework
 

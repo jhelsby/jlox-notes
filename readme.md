@@ -9,7 +9,7 @@ jlox is a dynamically typed, object-oriented tree-walk interpreter built in Java
 All the code described below lives inside the package `com.craftinginterpreters.lox`.
 
 1. [Scanning](/scanning.md)
-2. Representing Code
+2. [Representing Code](/representingcode.md)
 3. Parsing Expressions
 4. Evaluating Expressions
 5. Statements and State
