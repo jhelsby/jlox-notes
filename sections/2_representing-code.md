@@ -2,7 +2,7 @@
 
 In this section, we:
 
-* write syntax trees which define the following BNF grammar for Lox expressions:
+* write syntax trees which define the following [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) grammar for Lox expressions:
 
     ```
     expression -> literal | unary | binary | grouping ;
