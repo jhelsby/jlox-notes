@@ -10,8 +10,8 @@ jlox is a tree-walk interpreter for Lox built in Java.
 
 Unless otherwise stated, the code described below is defined within the package `com.craftinginterpreters.lox`.
 
-1. [Scanning](/scanning.md)
-2. [Representing Code](/representingcode.md)
+1. [Scanning](/sections/1_scanning.md)
+2. [Representing Code](/sections/2_representingcode.md)
 3. Parsing Expressions
 4. Evaluating Expressions
 5. Statements and State
