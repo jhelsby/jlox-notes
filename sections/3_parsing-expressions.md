@@ -53,7 +53,8 @@ Now, we can formalise our rules in [BNF](https://en.wikipedia.org/wiki/Backus%E2
 ```
 factor -> factor ( "/" | "*" ) unary
 ```
-will break our parser, because the method which would implements it via recursive descent would call itself infinitely and cause a stack overflow:
+will break our parser, because the method which would implements it via recursive descent would call itself infinitely and cause a stack overflow. Using the approach we outline in the next section, it would look like:
+
 ```java
 Expr factor() {
     Expr left = factor(); // <- stack overflow here
@@ -71,9 +72,243 @@ With that in mind, here is our new, unambiguous grammar, implementing the preced
 expression -> equality ;
 equality   -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison -> term ( ( ">" | "?=" | "<" | "<=" ) term )* ;
-term       -> factor ( ( "-" | "*" ) unary )* ;
-factor     -> ( "!" | "-" ) unary | primary
+term       -> factor ( ( "-" | "+" ) factor )* ;
+factor       -> unary ( ( "/" | "*" ) unary )* ;
+unary     -> ( "!" | "-" ) unary | primary ;
 primary    -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
 ```
 
 ## Recursive Descent Parsing
+
+We can now write a parser implementing this grammar.
+
+> `class Parser` and `Parser(List<Token> tokens)`
+
+* `Parser` takes and stores a list of tokens, which we will convert into an AST.
+
+* As with `Scanner`, we use a `int current` variable to track which token we need to parse next.
+
+### Helper Functions
+
+To implement our rules, we'll need a few simple helper functions.
+
+> `Token advance()`
+
+* Consume the current token, increment `current`, and return the consumed token.
+
+> `Token peek()`
+
+* Return the current token.
+
+> `Token previous()`
+
+* Return the previous token (i.e. the most recently consumed token).
+
+> `boolean check(TokenType type)`
+
+* Return `true` if the current token is of type `type`, and `false` otherwise.
+
+> `boolean match(TokenType... types)`
+
+* If the `current` token is in `types`, `advance()` and return true. Otherwise, return `false`.
+
+> `boolean isAtEnd()`
+
+* Return `true` if we've run out of tokens to parse, and `false` otherwise.
+
+### Rule Implementations
+
+I think that simply reproducing the method for each rule makes it pretty clear how the implementations work.
+
+> `expression -> equality ; `
+
+```java
+private Expr expression() {
+    return equality();
+}
+```
+
+> `equality   -> comparison ( ( "!=" | "==" ) comparison )* ;`
+
+```java
+private Expr equality() {
+    Expr expr = comparison();
+    while (match(BANG_EQUAL, EQUAL_EQUAL)) {
+        Token operator = previous();
+        Expr right = comparison();
+        expr = new Expr.Binary(expr, operator, right);
+    }
+    return expr;
+}
+```
+
+> `comparison -> term ( ( ">" | "?=" | "<" | "<=" ) term )* ;`
+
+```java
+private Expr comparison() {
+    Expr expr = term();
+    while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+        Token operator = previous();
+        Expr right = term();
+        expr = new Expr.Binary(expr, operator, right);
+    }
+    return expr;
+}
+```
+
+> `term       -> factor ( ( "-" | "+" ) factor )* ; `
+
+```java
+private Expr term() {
+    Expr expr = factor();
+    while (match(MINUS, PLUS)) {
+        Token operator = previous();
+        Expr right = factor();
+        expr = new Expr.Binary(expr, operator, right);
+    }
+    return expr;
+}
+```
+
+> `factor       -> unary ( ( "/" | "*" ) unary )* ;`
+```java
+private Expr factor() {
+    Expr expr = unary();
+    while (match(SLASH, STAR)) {
+        Token operator = previous();
+        Expr right = unary();
+        expr = new Expr.Binary(expr, operator, right);
+    }
+    return expr;
+}
+```
+
+> ` unary     -> ( "!" | "-" ) unary | primary ;`
+```java
+private Expr unary() {
+    if (match(BANG, MINUS)) {
+        Token operator = previous();
+        Expr right = unary();
+        return new Expr.Unary(operator, right);
+    }
+
+    return primary();
+}
+```
+
+> `primary    -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;`
+
+The case `( expression )` here requires a little extra work, to handle syntax error cases with mismatching brackets, such as:
+```
+(1 + 2
+```
+We'll implement this error handling in our `consume` method, which we'll define in a moment.
+
+```java
+private Expr primary() {
+    if (match(NUMBER, STRING)) {
+        return new Expr.Literal(previous().literal);
+    }
+
+    if (match(TRUE)) return new Expr.Literal(true);
+    if (match(FALSE)) return new Expr.Literal(false);
+    if (match(NIL)) return new Expr.Literal(null);
+
+    if (match(LEFT_PAREN)) {
+        Expr expr = expression();
+        consume(RIGHT_PAREN, "Expect ')' after expression.");
+        return new Expr.Grouping(expr);
+    }
+
+    throw error(peek(), "Expect expression.");
+}
+```
+
+> `Token consume(TokenType type, String message)`
+
+* If the provided token is of type `type`, return `advance()`.
+
+* Otherwise, throw `error(peek(), message)`.
+
+> `ParseError error(Token token, String message)`
+
+* Report an error using the `Lox.error` method we defined in [Scanning](/sections/1_scanning.md), showing the user the location of the error.
+
+* Return a `ParseError()` This is a new class we define which extends `RuntimeException`.
+
+## Syntax Errors
+
+`primary` introduces our first example of syntax error handling. In this case it's pretty simple, but we'll be extending this functionality later on. How do we want this to work?
+
+We generally want syntax error checkers to report as many syntax errors as they can. If a parser only reported the first syntax error it came across, you'd fix it only to be alerted of a new error somewhere else - with no idea how many more you might have to fix.
+
+On the other hand, cascaded "ghost" errors can arise following an initial syntax error. Here, the first error can cause subsequent valid syntax to be interpreted as invalid.
+
+For example, the print statement on line 3 below causes line 4 to be marked as a syntax error, even though line 4 is otherwise correct.
+
+```java
+1  public static void main(String[] args) {
+2      int x = 1;
+3      System.out.println(x) // <- Error: missing semicolon.
+4      int y = x + 1;        // <- Error: unreachable statement.
+}
+```
+
+To get around this, we'll use Panic Mode error recovery in _jlox_. Panic Mode error recovery tries to detect as many syntax errors as it can, while minimising cascading errors. When we encounter an error, we will:
+
+* report it to the user, with its location.
+
+* _synchronize_: discard all subsequent tokens until we reach the beginning of the next statement.
+
+* continue parsing from there.
+
+* repeat this process if we encounter any more syntax errors.
+
+We haven't yet implemented statements yet, but the synchronization process is straightforward - we just need to check for semicolons and statement keywords:
+
+```java
+private void synchronize() {
+    advance();
+    while (!isAtEnd()) {
+        if (previous().type == SEMICOLON) return;
+
+        switch (peek().type) {
+            case CLASS: case FOR: case FUN: case IF:
+            case: PRINT: case RETURN: case VAR; case WHILE;
+                return;
+        }
+
+        advance();
+    }
+}
+```
+
+### Wiring up the Parser
+
+Finally, we just need to add an entrypoint for our parser:
+
+```java
+Expr parse() {
+    try {
+        return expression();
+    } catch (ParseError error) {
+        return null;
+    }
+}
+```
+
+and add it to the `run(String source)` method we defined in [Section 1](/sections/1_scanning.md):
+
+```java
+private static void run(String source) {
+    Scanner scanner = new Scanner(source);
+    List<Token> tokens = scanner.scanTokens();
+    Parser parser = new Parser(tokens);
+    Expr expression = parser.parse();
+
+    // Stop if there was a syntax error.
+    if (hadError) return;
+
+    // This is all we have so far!
+}
+```
