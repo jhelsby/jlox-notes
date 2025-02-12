@@ -19,7 +19,7 @@ In `public class Lox`:
   * Reads and executes a file.
 
 * If given no arguments, runs `runPrompt()`.
-  * Launches a prompt in an infinite loop. Executes input code one line at a time.
+  * Launches a REPL prompt in an infinite loop. Executes input code one line at a time.
 
 > `void runFile(String path)` and `void runPrompt()`
 

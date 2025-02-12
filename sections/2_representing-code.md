@@ -82,7 +82,7 @@ An object-oriented approach could be to add an abstract method to our `Expr` cla
 
 It turns out there's no perfect solution here - we've run into a well-known, unsolved issue called the [Expression Problem](www.wikipedia.com/wiki/Expression_problem). Instead, we can work around it using the Visitor design pattern, which lets us add new operations without having to add to our `Expr` class. Here's how it works:
 
-* We add a `Visitor` interface to our `Expr` class.  It will contain abstract `visitExpr` methods for each of our expressions.
+1. We add a `Visitor` interface to our `Expr` class.  It will contain abstract `visitExpr` methods for each of our expressions.
 
     ```java
     interface Visitor<R> {
@@ -94,13 +94,13 @@ It turns out there's no perfect solution here - we've run into a well-known, uns
 
     Every operation we want to define on our expressions should implement this interface. Note that we use generic types so that these operations can return different types as required.
 
-* We add an abstract `accept` method to our `Expr` class:
+2. We add an abstract `accept` method to our `Expr` class:
     ```java
     abstract <R> R accept(Visitor<R> visitor);
     ```
 
 
-  Next, we override this `accept` method in each of our expression subclasses, using the corresponding `visitExpr` method defined above. This will allow us to take an operator and apply it to our expression. For example:
+  Next, we override this `accept` method in each of our expression subclasses, using the corresponding `visitExpr` method defined above. This will allow us to take an operator and apply it to our expression. Here's what it looks like for `Binary`:
 
     ```java
     class Binary extends Expr {
