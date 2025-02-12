@@ -13,7 +13,7 @@ Unless otherwise stated, the code described below is defined within the package 
 1. [Scanning](/sections/1_scanning.md)
 2. [Representing Code](/sections/2_representing-code.md)
 3. [Parsing Expressions](/sections/3_parsing-expressions.md)
-4. Evaluating Expressions
+4. [Evaluating Expressions](/sections/4_evaluating-expressions.md)
 5. Statements and State
 6. Control Flow
 7. Functions
