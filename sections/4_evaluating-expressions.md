@@ -98,7 +98,7 @@ private boolean isEqual(Object a, Object b) {
 
 * Except for the null case, Java's `equals()` method on Boolean, Double and String do all the work here for us.
 
-Let's get into our evaluation visit methods!
+We'll also need some runtime error reporting methods, `checkNumberOperand` and `checkNumberOperands`, which we'll use below and then discuss in the next section. Let's get into our evaluation visit methods!
 
 ```java
 @Override
@@ -127,6 +127,7 @@ public Object visitUnaryExpr(Expr.Unary expr) {
         case BANG:
             return !isTruthy(right);
         case MINUS:
+            checkNumberOperand(expr.operator, right);
             return -(double)right;
     }
 
@@ -141,7 +142,7 @@ public Object visitUnaryExpr(Expr.Unary expr) {
 
   * This is an example and consequence of Lox's dynamic typing.
 
-  * This type cast will happen at runtime when we evaluate `expr`. If `right` _isn't_ a number, a runtime error will be thrown - see the section below.
+  * This type cast will happen at runtime when we evaluate `expr`. If `right` _isn't_ a number, a runtime error will be thrown by `checkNumberOperand`.
 
 ```java
 public Object visitBinaryExpr(Expr.Binary expr) {
@@ -153,14 +154,19 @@ public Object visitBinaryExpr(Expr.Binary expr) {
         case EQUAL_EQUAL: return isEqual(left, right);
 
         case GREATER:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left > (double)right;
         case GREATER_EQUAL:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left >= (double)right;
         case LESS:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left < (double)right;
         case LESS_EQUAL:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left <= (double)right;
         case MINUS:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left - (double)right;
         case PLUS:
             if (left instanceof Double && right instanceof Double) {
@@ -169,9 +175,13 @@ public Object visitBinaryExpr(Expr.Binary expr) {
             if (left instanceof String && right instanceof String) {
                 return (String)left + (String)right;
             }
+            throw new RuntimeError(expr.operator,
+                "Operands must be two numbers or two strings.");
         case SLASH:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left / (double)right;
         case STAR:
+            checkNumberOperands(expr.operator, left, right);
             return (double)left * (double)right;
     }
 
@@ -186,7 +196,7 @@ public Object visitBinaryExpr(Expr.Binary expr) {
 
 ### Runtime Errors
 
-If any of the casts above fail - say we enter `-"foo"` into our interpreter, we have a runtime error on our hands. As things stand, the JVM would throw a `ClassCastException`, printing a Java stack trace and exiting the application. To make a useful interpreter, we would prefer to:
+If any of the casts above fail - say we enter `2 * "foo"` into our interpreter, we have a runtime error on our hands. As things stand, the JVM would throw a `ClassCastException`, printing a Java stack trace and exiting the application. To make a useful interpreter, we would prefer to:
 
 * stop evaluating the expression.
 
@@ -195,3 +205,80 @@ If any of the casts above fail - say we enter `-"foo"` into our interpreter, we 
 * if we're running a Lox script from a file, exit the process.
 
 * if we're running the REPL, allow the user to enter new code.
+
+This is quite straightforward, so I will be brief. We define:
+
+> ```java
+> class RuntimeError extends RuntimeException {
+>     final Token token;
+>
+>     RuntimeError(Token token, String message) {
+>         super(message);
+>         this.token = token;
+>     }
+> }
+> ```
+
+* This tracks the token that identifies where the runtime error came from.
+
+We now add the following to our `Interpreter` class:
+
+> `void checkNumberOperand(Token operator, Object operand)` and `void checkNumberOperands(Token operator, Object left, Object right)`
+
+* These throw a `RuntimeError(operator, "Operand(s) must be of type number.")` if the objects parameters aren't `instanceof Double`.
+
+## Hooking up the Interpreter
+
+We define the Interpreter's public API as follows:
+
+```java
+void interpret(Expr expression) {
+    try {
+        Object value = evaluate(expression);
+        System.out.println(stringify(value));
+    } catch (RuntimeError error) {
+        Lox.runtimeError(error);
+    }
+}
+```
+
+using
+
+> ` String stringify(Object object)`
+
+* This just converts our Lox value into a suitable string using the Java method `object.toString()` (with special cases for null, and for printing integer float values like `1.0` as `1`).
+
+We now update our `Lox.java` file to use our interpreter.
+
+> `static boolean hadRuntimeError = false;`
+
+* This tracks whether a runtime error has been thrown.
+
+> `static void runtimeError(RuntimeError error)`
+
+* This prints the error in a readable format and sets `hadRuntimeError = true`.
+
+We add the line `if (hadRuntimeError) System.exit(70)` to `runFile()`, to handle runtime errors when running Lox scripts from a file.
+
+We add the interpreter to our Lox class:
+> ```java
+> private static final Interpreter interpreter = new Interpreter();
+> ```
+
+And finally, we add it to our `run` method!
+
+```java
+private static void run(String source) {
+    Scanner scanner = new Scanner(source);
+    List<Token> tokens = scanner.scanTokens();
+    Parser parser = new Parser(tokens);
+    Expr expression = parser.parse();
+
+    // Stop if there was a syntax error.
+    if (hadError) return;
+
+    interpreter.interpret(expression);
+
+    // This is all we have so far!
+}
+```
