@@ -202,7 +202,7 @@ The case `( expression )` here requires a little extra work, to handle syntax er
 ```
 (1 + 2
 ```
-We'll implement this error handling in our `consume` method, which we'll define in a moment.
+We'll implement this error handling in our `consume` method, which we'll define in a moment. We'll also need to throw an error at the end, if we try to call `primary()` on a token which isn't an expression.
 
 ```java
 private Expr primary() {
@@ -236,7 +236,9 @@ private Expr primary() {
 
 * Return a `ParseError()` This is a new class we define which extends `RuntimeException`.
 
-## Syntax Errors
+  * We return a `ParseError()` instead of throwing it so that the method calling `error()` can decide for itself whether to synchronize or not - this will be case-dependent.
+
+## Syntax Errors and Panic Mode
 
 `primary` introduces our first example of syntax error handling. In this case it's pretty simple, but we'll be extending this functionality later on. How do we want this to work?
 
@@ -259,8 +261,9 @@ To get around this, we'll use Panic Mode error recovery in _jlox_. Panic Mode er
 * report it to the user, with its location.
 
 * _synchronize_: discard all subsequent tokens until we reach the beginning of the next statement.
+  * (You can synchronise to other points if you want, but the next statement is standard.)
 
-* continue parsing from there.
+* continue parsing from the next statement.
 
 * repeat this process if we encounter any more syntax errors.
 
@@ -282,6 +285,8 @@ private void synchronize() {
     }
 }
 ```
+
+* Note that semicolons may not always indicate the end of a statement - e.g., our for loops look like `for(var i = 0, i<10, i=i+1)` - but this is a good enough approximation for our purposes.
 
 ### Wiring up the Parser
 
