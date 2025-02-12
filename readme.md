@@ -14,7 +14,7 @@ Unless otherwise stated, the code described below is defined within the package 
 2. [Representing Code](/sections/2_representing-code.md)
 3. [Parsing Expressions](/sections/3_parsing-expressions.md)
 4. [Evaluating Expressions](/sections/4_evaluating-expressions.md)
-5. Statements and State
+5. [Statements and State](/sections/5_statements-and-state.md)
 6. Control Flow
 7. Functions
 8. Resolving and Binding
