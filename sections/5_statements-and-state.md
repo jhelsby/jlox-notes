@@ -45,28 +45,86 @@ We must then change our expression rules to allow for variables, adding `IDENTIF
 
 ```
 expression -> assignment;
-assignment -> IDENTIFIER "=" assignment | equality
+assignment -> IDENTIFIER "=" assignment | equality ;
           [...]
 primary    -> NUMBER | STRING | "true" | "false"
              | "nil" | "(" expression ")" | IDENTIFIER ;
 ```
 
-Some implementation details:
+Finally, we change our parsing function to `List<Stmt> parse()`. It reads a program and loads its statements into an ArrayList.
 
-* We change our parsing function to `List<Stmt> parse()`. It reads a program and loads its statements into an ArrayList.
+### Environment
 
-* _Environment_: we store our variable identifiers and their associated values in memory using a hash map - `Map<String, Object> = new HashMap<>()`. We add our `Environment` class to our `Interpreter`.
+The _environment_ is where we store our variable identifiers and their associated values in memory. We implement this using a hash map - `Map<String, Object> = new HashMap<>()`. We add our `Environment` class to our `Interpreter`.
 
-  * The statement `var foo = "bar";` will `put` this in our map.
+* The statement `var foo = "bar";` will `put` this in our map.
 
-  * `var foo;` will put the key-value pair `(foo, nil)` in the map.
+* `var foo;` will put the key-value pair `(foo, nil)` in the map.
 
-  * Using a variable retrieves it from the map it has been defined, and throws a runtime error if not.
+* Using a variable retrieves it from the map it has been defined, and throws a runtime error if not.
 
-    We could make it a syntax error, but this causes problems with recursion. We want to be able to refer to functions that haven't been defined yet - they might be defined later on in our code.
+  We could make it a syntax error, but this causes problems with recursion. We want to be able to refer to functions that haven't been defined yet - they might be defined later on in our code.
 
-    Making it a runtime error means that an error is only thrown if we try to _evaluate_ a variable and can't find it.
+  Making it a runtime error means that an error is only thrown if we try to _evaluate_ a variable and can't find it.
 
-* Subtleties arise when trying to parse assignments, and distinguishing between l-values and r-values. In short, we parse the left-hand side, which can be any expression. If we find a `=`, we parse the right-hand side. Finally, we check that the left-hand side is a variable that can have values assigned to it. If so, we combine these into an assignment expression node.
+### Assignment
+
+Our assignment rule is a little tricky, because we need to distinguishing between l-values and r-values in our assignments.
+
+* We don't want to evaluate an l-value to find out what value is stored there. Rather, we want to evaluate it to find out the storage location it refers to.
+
+* On the other hand, we want to evaluate the r-value to get its value.
+
+* Finally, we want to store the value represented by the r-value in the storage location referred to by the l-value.
+
+Consider the following example:
+```java
+makeList().head.node = 1 + 2;
+```
+
+* We don't care what is stored at the l-value `makeList().head.node` - we just want to assign the r-value `1+2` to that location.
+
+* We need to evaluate `1+2` to find that it represents the value `3`.
+
+* Finally, we need to store `3` at the l-value location `makeList().head.node`.
+
+To make this work alongside our grammar - which looks like
+```
+expression -> assignment;
+assignment -> IDENTIFIER "=" assignment | equality ;
+equality   -> ...
+```
+- we can implement the `assignment` rule as follows:
+
+```java
+private Expr assignment() {
+    Expr expr = equality();
+
+    if (match(EQUAL)) {
+        Token equals = previous();
+        Expr value = assignment();
+
+        if (expr instanceof Expr.Variable) {
+            Token name = ((Expr.Variable)expr).name;
+            return new Expr.Assign(name, value);
+        }
+
+        error(equals, "Invalid assignment target.");
+    }
+
+    return expr;
+}
+```
+
+* If we have an expression that _isn't_ followed by an `=` assignment operator, we just parse and return it.
+
+* If it _is_ followed by `=`, we parse the l-value, then the `=`, then the r-value (recursively, using `assignment()`).
+
+* Now, we check if our l-value refers to a valid storage location - is it a variable?
+
+  * If so, we can create and return the corresponding `Expr.Assign` object.
+
+  * Otherwise, we indicate an error, and return the l-value we were able to parse successfully.
+
 
 ## Scope
