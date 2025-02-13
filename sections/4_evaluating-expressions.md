@@ -265,6 +265,8 @@ We add the interpreter to our Lox class:
 > private static final Interpreter interpreter = new Interpreter();
 > ```
 
+* This is static so that successive calls to `run()` inside a REPL session reuse the same interpreter. This will allow us to store global variables across a REPL session when we implement them later.
+
 And finally, we add it to our `run` method!
 
 ```java
