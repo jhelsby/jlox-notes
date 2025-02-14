@@ -57,15 +57,43 @@ Finally, we change our parsing function to `List<Stmt> parse()`. It reads a prog
 
 The _environment_ is where we store our variable identifiers and their associated values in memory. We implement this using a hash map - `Map<String, Object> = new HashMap<>()`. We add our `Environment` class to our `Interpreter`.
 
-* The statement `var foo = "bar";` will `put` this in our map.
+* The statement `var foo = "bar";` will put the key-value pair `(foo, "bar")` in our map.
 
-* `var foo;` will put the key-value pair `(foo, nil)` in the map.
+  `var foo;` will put `(foo, nil)` in the map.
 
 * Using a variable retrieves it from the map it has been defined, and throws a runtime error if not.
 
-  We could make it a syntax error, but this causes problems with recursion. We want to be able to refer to functions that haven't been defined yet - they might be defined later on in our code.
+  * We could make it a syntax error, but this causes problems with recursion. We want to be able to refer to functions that haven't been defined yet - they might be defined later on in our code.
 
-  Making it a runtime error means that an error is only thrown if we try to _evaluate_ a variable and can't find it.
+  * Making it a runtime error means that an error is only thrown if we try to _evaluate_ a variable and can't find it.
+
+As we'll discuss in a moment, we also want to implement local scope within blocks. Inside a block, any variables we declare will be local to that block. Once we leave the block, those local variables are no longer accessible. For example:
+```java
+// Block A.
+{
+  var x = 0;
+
+  // Block B.
+  {
+    var x = 1;
+    print x; // Prints 1.
+  }
+
+  print x;   // Prints 0.
+}
+```
+
+To implement this, we just add an `enclosing` field to our `Environment`. This will be `nil` for a global scope, or the parent scope otherwise. In our example above, Block A will have `enclosing` point to the global scope's environment, and Block B will point to Block A's environment.
+
+Variable lookup within scopes looks like this:
+
+* Check if the variable is in the current scope. If it is, return it.
+
+* If it isn't look in the parent scope.
+
+* Repeat recursively until you reach the global scope. If you still haven't found it, throw a "Variable Not Found" error.
+
+We'll expand on this in the [Scope](#scope) section below.
 
 ### Assignment
 
@@ -126,5 +154,54 @@ private Expr assignment() {
 
   * Otherwise, we indicate an error, and return the l-value we were able to parse successfully.
 
-
 ## Scope
+
+We discussed scope briefly in the [Environment](#environment) section above, but I actually don't think too much needs adding. Some definitions:
+
+* We define scopes using _blocks_, marked with curly braces:
+    ```java
+    // Global scope.
+    var x = 0;
+    var y = 3;
+
+    // Block A, defining an outer scope.
+    {
+      var x = 1;
+
+      print y;    // Prints 3.
+
+      // Block B, defining an inner scope.
+      {
+        var x = 2;
+        print x; // Prints 2.
+        print y; // Prints 3.
+
+      }
+
+      print x;   // Prints 1.
+      print y;   // Prints 3.
+
+    }
+
+    print x;     // Prints 0.
+    print y;     // Prints 3.
+    ```
+
+* If scope B is inside scope A, we say that B is _nested_ in A. A is B's _parent_.
+
+* All block scopes are nested within the global scope.
+
+* If a nested scope declares a variable with the same name as one declared in the parent scope, we say that the inner variable _shadows_ the outer one. We can't access the outer variable until we exit the inner scope.
+
+  * In the code snippet above, the `x` in Block B shadows the `x` in Block A, which shadows the `x` in the global scope.
+
+### Block Syntax
+
+We modify our grammar as follows:
+
+```
+statement -> exprStmt | printStmt | block ;
+block     -> "{" declaration* "}" ;
+```
+
+The `Block` syntax tree ndode is a `List<Stmt> statements`.
