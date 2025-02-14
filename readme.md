@@ -15,7 +15,7 @@ Unless otherwise stated, the code described below is defined within the package 
 3. [Parsing Expressions](/sections/3_parsing-expressions.md)
 4. [Evaluating Expressions](/sections/4_evaluating-expressions.md)
 5. [Statements and State](/sections/5_statements-and-state.md)
-6. Control Flow
+6. [Control Flow](/sections/6_control-flow.md)
 7. Functions
 8. Resolving and Binding
 9. Classes
