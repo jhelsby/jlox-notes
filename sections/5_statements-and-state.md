@@ -22,7 +22,7 @@ We have three types of statements:
 
 * Declaration statements. These assign identifiers to variables, functions, or classes. For example, `var foo = "bar"`.
 
-Adding syntax trees and parsing these follows many of the same principles as for expressions, which we covered in [Representing Code](/sections/2_representing-code.md) and [Parsing Expressions](/sections/3_parsing-expressions.md). I'll be accordingly brief, and expand on details only when they differ significantly from our expression implementations.
+Adding syntax trees and parsing these follows many of the same principles as for expressions, which we covered in [Representing Code](/sections/2_representing-code.md), [Parsing Expressions](/sections/3_parsing-expressions.md), and [Evaluating Expressions](/sections/4_evaluating-expressions.md). I'll be accordingly brief, and expand on details only when they differ significantly from our expression implementations.
 
 Here are our new rules:
 
@@ -44,7 +44,7 @@ printStmt   -> "print" expression ";"
 We must then change our expression rules to allow for variables, adding `IDENTIFIER`:
 
 ```
-expression -> assignment;
+expression -> assignment ;
 assignment -> IDENTIFIER "=" assignment | equality ;
           [...]
 primary    -> NUMBER | STRING | "true" | "false"
@@ -204,4 +204,4 @@ statement -> exprStmt | printStmt | block ;
 block     -> "{" declaration* "}" ;
 ```
 
-The `Block` syntax tree ndode is a `List<Stmt> statements`.
+The `Block` syntax tree node is a `List<Stmt> statements`.
