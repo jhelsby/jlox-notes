@@ -8,8 +8,6 @@ In this section, we'll implement basic control flow:
 
 * `while` and `for` loops.
 
-This won't take long - and once we're done, our language will be Turing-complete!
-
 As with [the previous section](/sections/5_statements-and-state.md), this doesn't require many concepts that we haven't seen already in Sections 2-4. So I'll keep it brief unless there's something worth expanding on.
 
 ## Conditional Execution
