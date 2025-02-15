@@ -124,7 +124,7 @@ can be written as:
 }
 ```
 
-Because of this, we don't need to add a new syntax tree node for for loops. Instead, we can reuse our `whileStatement()` parser to parse for loops directly. We just need to transform the for loop into a suitable form first. Here's the for statement parser:
+Because of this, we don't need to add a new syntax tree node for for loops. Instead, we can reuse our `whileStatement()` parser to parse for loops directly. We just need to transform the for loop into a suitable while loop form first - a process known as _desugaring_. Here's the for statement parser:
 
 ```java
 // Parser.java
