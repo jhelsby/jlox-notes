@@ -101,7 +101,7 @@ interface LoxCallable {
 * `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, the binary operator `add(1, 2)` has an arity of 2.
 
 
-The [visit method](/sections/4_evaluating-expressions.md#evaluation-visit-methods) to interpret function calls (see ) is quite straightforward too:
+The [visit method](/sections/4_evaluating-expressions.md##visitor-pattern-basics) to interpret function calls (see ) is quite straightforward too:
 
 ```java
 @Override
@@ -340,7 +340,7 @@ When we call `add`, the interpreter will:
 * evaluate the `1 + 2 + 3` expression to `6`.
 * print `6`.
 
-Finally, we'll implement our [visit method](/sections/4_evaluating-expressions.md#evaluation-visit-methods), which is much simpler:
+Finally, we'll implement our [visit method](/sections/4_evaluating-expressions.md#visitor-pattern-basics), which is much simpler:
 
 ```java
 @Override
@@ -358,28 +358,85 @@ This method:
 
 ### Return Statements
 
+To get values out of our functions, we need to implement return statements. Since Lox is dynamically typed, the compiler can't stop us doing something like this:
+
+```java
+fun foo() {
+    print "don't return anything";
+}
+
+fun bar() {
+    return;
+}
+
+var result1 = foo();
+var result2 = bar();
+
+print result1;
+print result2;
+```
+
+We need to ensure `result1` and `result2` are well-defined. To handle these cases, we treat any function without a return statement, or without a value after a return statement, as implicitly returning `nil`.
+
+Here's the resulting grammar for `return`:
+
+```
+statement  -> exprStmt
+            | forStmt
+            | ifStmt
+            | printStmt
+            | returnStmt
+            | whileStmt
+            | block ;
+
+returnStmt -> "return" expression? ";" ;
+```
+
+Here's our statement AST node:
+
+```java
+Return : Token keyword, Expr value
+```
+
+`keyword` stores the `return` keyword token for error reporting purposes. The parse method is as you'd expect:
+
+```java
+private Stmt returnStatement() {
+    Token keyword = previous();
+    Expr value = null;
+    if (!check(SEMICOLON)) {
+        value = expression();
+    }
+
+    consume(SEMICOLON, "Expect ';' after return value.");
+    return new Stmt.Return(keyword, value);
+}
+```
+
+#### Returning from calls
+
 ### Closures
 
-For example, consider:
+Consider:
 
-    ```java
-    fun makeCounter() {
-        var i = 0;
+```java
+fun makeCounter() {
+    var i = 0;
 
-        fun count() {
-            i = i + 1;
-            print i;
-        }
-
-        return count;
-
+    fun count() {
+        i = i + 1;
+        print i;
     }
-    ```
 
-    We want this to work as follows:
+    return count;
 
-    ```java
-    var counter = makeCounter();
-    counter(); // Prints "1".
-    counter(); // Prints "2".
-    ```
+}
+```
+
+We want this to work as follows:
+
+```java
+var counter = makeCounter();
+counter(); // Prints "1".
+counter(); // Prints "2".
+```

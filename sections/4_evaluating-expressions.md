@@ -75,7 +75,7 @@ which is what we wanted - `visitingInterpreter` is visiting (i.e. interpreting) 
 
 ### Evaluation Visit Methods
 
-I think the visit method code are quite self-explanatory, so I will reproduce them below with minimal notes. We'll need a couple of simple helper functions before we can implement them, though:
+I think the visit method code is quite self-explanatory, so I will reproduce them below with minimal notes. We'll need a couple of simple helper functions before we can implement them, though:
 
 ```java
 private boolean isTruthy(Object object) {
