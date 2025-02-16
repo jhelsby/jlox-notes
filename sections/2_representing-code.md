@@ -136,7 +136,7 @@ will be printed as `(* (- 123) (group 45.67))`.
 In `AstPrinter.java`:
 
 ```java
-package com.craftinginterpreters.lox
+package com.craftinginterpreters.lox;
 
 class AstPrinter implements Expr.Visitor<String> {
     String print(Expr expr) {
