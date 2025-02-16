@@ -101,7 +101,7 @@ interface LoxCallable {
 * `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, the binary operator `add(1, 2)` has an arity of 2.
 
 
-The `visit` method to interpret function calls (see [Evaluation Visit Methods](/sections/4_evaluating-expressions.md#evaluation-visit-methods)) is quite straightforward too:
+The [visit method](/sections/4_evaluating-expressions.md#evaluation-visit-methods) to interpret function calls (see ) is quite straightforward too:
 
 ```java
 @Override
@@ -239,3 +239,147 @@ private Stmt.Function function(String kind) {
 * To use this for functions and for methods, we'll call `function("function")` and `function("method")` respectively.
 
 ## Function Objects
+
+Now we've parsed the syntax, we want to interpret the function itself. This is significantly more complicated than interpreting many of the AST nodes we've seen previously, as we need to handle:
+
+1. the function environment. To work properly, function parameters should be local to the function call itself.
+
+2. return statements. Our functions should evaluate to a value (possibly nil), and `return` should immediately exit a function and its associated environments.
+
+3. function closures, and the environment issues these create.
+
+To do this, we'll implement a `LoxFunction` class. We'll start small, addressing (1) first, and then add functionality for (2) and (3) in turn.
+
+### `LoxFunction` and `visitFunction`
+
+Function parameters need to be local to the function. If we have some code like:
+
+```java
+var a = 1
+
+fun foo(a) {
+    print a + 1;
+}
+```
+
+we definitely want `foo(10)` to print `11`, not `2`.
+
+But they also need to be local to the function _call_. If we have some recursive function like:
+
+```java
+fun count(n) {
+    if (n > 1) count(n-1);
+
+    print n;
+}
+```
+
+then `count(3)` should print `1`, `2`, `3`, rather than `3`, `3`, `3` or anything else.
+
+To do this, calling a function object should create a new environment dynamically. We'll see this in the `call` method of our `LoxFunction` implementation below:
+
+```java
+import java.util.List;
+
+class LoxFunction implements LoxCallable {
+    private final Stmt.Function declaration;
+
+    // Load our function AST node.
+    LoxFunction(Stmt.Function declaration) {
+        this.declaration = declaration
+    }
+
+    @Override
+    public Object call(Interpreter interpreter, List<Object> arguments) {
+
+        // Create a new environment for the function call.
+        Environment environment = new Environment(interpreter.globals);
+
+        // Bind each function argument to its parameter identifier.
+        for (int i = 0; i < declaration.params.size(); ++i) {
+            environment.define(
+                declarations.params.get(i).lexeme,
+                arguments.get(i));
+        }
+
+        interpreter.executeBlock(declaration.body, environment);
+
+        // We'll update this part later, when
+        // we implement our return statement.
+        return null;
+    }
+
+    @Override
+    public int arity() {
+        return declaration.params.size();
+    }
+
+    @Override
+    public String toString() {
+        // e.g. for a function `foo()`,
+        // this will print "<fn foo>".
+        return "<fn " + declaration.name.lexeme + ">";
+    }
+}
+```
+
+To illustrate how `call` works, suppose we define the program:
+```java
+fun add(a, b, c) {
+    print a + b + c;
+}
+
+add(1, 2, 3);
+```
+
+When we call `add`, the interpreter will:
+* create a new environment.
+* add the bindings `a -> 1`, `b -> 2`, `c -> 3` to that environment.
+* begin executing `print a + b + c;`, the `add` function body.
+* convert this body into `print 1 + 2 + 3;` using the environment we just created.
+* evaluate the `1 + 2 + 3` expression to `6`.
+* print `6`.
+
+Finally, we'll implement our [visit method](/sections/4_evaluating-expressions.md#evaluation-visit-methods), which is much simpler:
+
+```java
+@Override
+public Void visitFunctionStmt(Stmt.Function stmt) {
+    LoxFunction function = new LoxFunction(stmt);
+    environment.define(stmt.name.lexeme, function);
+    return null;
+}
+```
+
+This method:
+* converts a function AST node into a `LoxFunction` object.
+* binds the function object to its function name.
+* stores a reference to this binding in the current environment.
+
+### Return Statements
+
+### Closures
+
+For example, consider:
+
+    ```java
+    fun makeCounter() {
+        var i = 0;
+
+        fun count() {
+            i = i + 1;
+            print i;
+        }
+
+        return count;
+
+    }
+    ```
+
+    We want this to work as follows:
+
+    ```java
+    var counter = makeCounter();
+    counter(); // Prints "1".
+    counter(); // Prints "2".
+    ```
