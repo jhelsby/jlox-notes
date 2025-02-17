@@ -98,10 +98,10 @@ interface LoxCallable {
 }
 ```
 
-* `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, the binary operator `add(1, 2)` has an arity of 2.
+* `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, binary operators like `add(1, 2)` have an arity of 2.
 
 
-The [visit method](/sections/4_evaluating-expressions.md##visitor-pattern-basics) to interpret function calls (see ) is quite straightforward too:
+The [visit method](/sections/4_evaluating-expressions.md##visitor-pattern-basics) to interpret function calls is quite straightforward too:
 
 ```java
 @Override
