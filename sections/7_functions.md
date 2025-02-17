@@ -244,13 +244,13 @@ Now we've parsed the syntax, we want to interpret the function itself. This is s
 
 1. the function environment. To work properly, function parameters should be local to the function call itself.
 
-2. return statements. Our functions should evaluate to a value (possibly nil), and `return` should immediately exit a function and its associated environments.
+2. return statements. Our functions should evaluate to a value (possibly nil), and `return` should immediately exit a function to return that value.
 
 3. function closures, and the environment issues these create.
 
 To do this, we'll implement a `LoxFunction` class. We'll start small, addressing (1) first, and then add functionality for (2) and (3) in turn.
 
-### `LoxFunction` and `visitFunction`
+### `LoxFunction` and its visit method
 
 Function parameters need to be local to the function. If we have some code like:
 
@@ -286,13 +286,14 @@ class LoxFunction implements LoxCallable {
 
     // Load our function AST node.
     LoxFunction(Stmt.Function declaration) {
-        this.declaration = declaration
+        this.declaration = declaration;
     }
 
     @Override
     public Object call(Interpreter interpreter, List<Object> arguments) {
 
         // Create a new environment for the function call.
+        // We'll modify this when we implement closures later.
         Environment environment = new Environment(interpreter.globals);
 
         // Bind each function argument to its parameter identifier.
@@ -415,9 +416,98 @@ private Stmt returnStatement() {
 
 #### Returning from calls
 
+We now need to make our return statement exit the function with the value it has been given. Consider the following example:
+
+```java
+fun count(n) {
+    while (n < 100) {
+        if (n == 3) return n;
+        print n;
+        n = n + 1;
+    }
+}
+
+count(1);
+```
+
+By the time we reach the `return` statement, the Java call stack looks roughly like this:
+
+```java
+Interpreter.visitReturnStatement()
+Interpreter.visitIfStatement()
+Interpreter.executeBlock()
+Interpreter.visitBlockStatement()
+Interpreter.visitWhileStatement()
+Interpreter.executeBlock()
+LoxFunction.call()
+Interpreter.visitCallStatement()
+```
+
+To exit the function with our return value, we need to jump all the way from the `Interpreter.visitReturnStatement()` method call to `LoxFunction.call()`. For the purposes of our _jlox_ implementation, we will do this using Java exceptions, which will handle all the tricky parts of this for us.
+
+This isn't a great way to implement return statements in general - it is confusing to read, violates the intent of exceptions (returning from a function isn't exceptional!), and introduces performance issues. However, this approach does the job for our didactic purposes - it's a quick and easy way to implement our return functionality.
+
+First, we make a new return object that throws an exception:
+
+```java
+class Return extends RuntimeException {
+    final Object value;
+
+    Return(Object value) {
+        super(null, null, false, false);
+        this.value = value;
+    }
+}
+```
+
+* The `super` method disables some unnecessary JVM machinery for exception handling - for example, we don't need stack traces.
+
+Here's our visit statement:
+
+```java
+@Override
+public Void visitReturnStmt(Stmt.Return stmt) {
+    Object value = null;
+    if (stmt.value != null) value = evaluate(stmt.value);
+
+    throw new Return(value);
+}
+```
+
+* If the statement doesn't return a value, we use `nil` instead.
+
+Now our return statement throws exceptions, we can update our `LoxFunction.call` method accordingly:
+
+```java
+@Override
+public Object call(Interpreter interpreter, List<Object> arguments) {
+    Environment environment = new Environment(interpreter.globals);
+    for (int i = 0; i < declaration.params.size(); ++i) {
+        environment.define(
+            declarations.params.get(i).lexeme,
+            arguments.get(i));
+    }
+
+    /**
+     * Our new return handling code.
+     */
+    try {
+        interpreter.executeBlock(declaration.body, environment)
+    } catch (Return returnValue) {
+        return returnValue.value;
+    }
+
+    return null;
+}
+```
+
+* If we encounter a return statement while the function body is executing, we immediately get the return value, exit the `interpreter.executeBlock` method, and return the value.
+
+* If we never encounter a return statemnt, the function returns `nil`.
+
 ### Closures
 
-Consider:
+Closures allow us to nest functions inside blocks or other functions. Consider the following example:
 
 ```java
 fun makeCounter() {
@@ -429,7 +519,6 @@ fun makeCounter() {
     }
 
     return count;
-
 }
 ```
 
@@ -440,3 +529,46 @@ var counter = makeCounter();
 counter(); // Prints "1".
 counter(); // Prints "2".
 ```
+
+When we run `makeCounter()`, it creates an environment, adds the variable `i` to it, defines and returns the `count` method, then exits. In our current implementation, `count` creates a new, empty environment, with `global` as its parent environment. So when the interpreter reaches the line:
+
+```java
+i = i + 1
+```
+
+it tries to look up `i` in this empty environment. When this fails, it reports an undefined variable error.
+
+Instead, what we want is to set `count`'s parent environment to be the `makeCounter` environment. This is consistent with how environments work for variables. This is an easy fix - we just update our `LoxFunction` class to store and use a provided `closure` environment:
+
+```java
+class LoxFunction implements LoxCallable {
+    private final Stmt.Function declaration;
+    private final Environment closure;
+
+    LoxFunction(Stmt.Function declaration, ) {
+        this.declaration = declaration;
+        this.closure = closure;
+    }
+
+    @Override
+    public Object call(Interpreter interpreter, List<Object> arguments) {
+        Environment environment = new Environment(closure);
+
+        // ...
+    }
+```
+
+and update the `visit` method accordingly:
+
+```java
+@Override
+public Void visitFunctionStmt(Stmt.Function stmt) {
+    LoxFunction function = new LoxFunction(stmt, environment);
+    environment.define(stmt.name.lexeme, function);
+    return null;
+}
+```
+
+* Recall that the `Interpreter` class, which contains this visit method, already has the current environment stored in `environment`.
+
+That's it! Closures now work as intended.
