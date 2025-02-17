@@ -571,4 +571,4 @@ public Void visitFunctionStmt(Stmt.Function stmt) {
 
 * Recall that the `Interpreter` class, which contains this visit method, already has the current environment stored in `environment`.
 
-That's it! Closures now work as intended.
+That's it! Our `makeCounter` example above now works as intended. We're not quite done with closures though - this approach relies on dynamic scoping instead of the lexical scoping we've used so far. We'll fix this in the next section, so our final _jlox_ implementation remains lexically scoped.
