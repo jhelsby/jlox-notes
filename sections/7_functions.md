@@ -98,10 +98,10 @@ interface LoxCallable {
 }
 ```
 
-* `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, the binary operator `add(1, 2)` has an arity of 2.
+* `arity()` reports the _arity_ of the function - the number of arguments a function can take. For example, binary operators like `add(1, 2)` have an arity of 2.
 
 
-The [visit method](/sections/4_evaluating-expressions.md##visitor-pattern-basics) to interpret function calls (see ) is quite straightforward too:
+The [visit method](/sections/4_evaluating-expressions.md##visitor-pattern-basics) to interpret function calls is quite straightforward too:
 
 ```java
 @Override
@@ -571,4 +571,4 @@ public Void visitFunctionStmt(Stmt.Function stmt) {
 
 * Recall that the `Interpreter` class, which contains this visit method, already has the current environment stored in `environment`.
 
-That's it! Closures now work as intended.
+That's it! Our `makeCounter` example above now works as intended. We're not quite done with closures though - this approach relies on dynamic scoping instead of the lexical scoping we've used so far. We'll fix this in the next section, so our final _jlox_ implementation remains lexically scoped.
