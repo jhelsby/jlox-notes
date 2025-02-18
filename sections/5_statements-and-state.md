@@ -158,6 +158,10 @@ private Expr assignment() {
 
 We discussed scope briefly in the [Environment](#environment) section above, but I actually don't think too much needs adding. Some definitions:
 
+* Lox uses _lexical scoping_, with the following scope rule:
+
+  > A variable usage refers to the preceding declaration with the same name in the innermost scope that encloses the expression where the variable is used.
+
 * We define scopes using _blocks_, marked with curly braces:
     ```java
     // Global scope.

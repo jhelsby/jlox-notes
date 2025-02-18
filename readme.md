@@ -17,6 +17,6 @@ Unless otherwise stated, the code described below is defined within the package 
 5. [Statements and State](/sections/5_statements-and-state.md)
 6. [Control Flow](/sections/6_control-flow.md)
 7. [Functions](/sections/7_functions.md)
-8. Resolving and Binding
+8. [Resolving and Binding](/sections/8_resolving-and-binding.md)
 9. Classes
 10. Inheritance
