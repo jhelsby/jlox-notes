@@ -65,7 +65,7 @@ if we're in the `showA` scope, we're one hop away from `a = block`, and two hops
 
 The nested environments together with the number of hops completely specify the value a variable should be resolved to.
 
-### Our Resolver's Approach
+## Our Resolver's Approach
 
 Traditionally, we'd put this resolving information in the parser. It's a static property based on the structure of the source code. And for _clox_, this is what we'll do.
 
@@ -113,9 +113,9 @@ Here are the rules:
 * Variable expressions (i.e. accessing a variable) and assignment expressions need to have their variables resolved.
   * This part is more straightforward, as you'll see.
 
-### Implementing our Resolver
+## Implementing our Resolver
 
-The code for our `Resolver` class is a little complicated, so I'm going to reproduce it in full with comments and annotations. It starts simply enough:
+The code for our `Resolver` class is a little complicated, so I'm going to reproduce quite a bit of it, with comments and annotations. It starts simply enough:
 
 ```java
 package com.craftinginterpreters.lox;
@@ -280,4 +280,64 @@ private void resolveLocal(Expr expr, Token name) {
 
 * You may be wondering why we're using the parameter `Expr expr` instead of `Expr.Variable varExpr`, like in `visitVariableExpr`.
 
-  The reason is that we'll reuse this method to resolve functions, and classes (including `this` and `super`).
+  The reason is that we'll reuse `resolveLocal` to resolve functions, and classes (including methods, `this` and `super`).
+
+That's the hard part done! Now we can do assignment expressions:
+
+```java
+@Override
+public Void visitAssignExpr(Expr.Assign assignExpr) {
+    resolve(assignExpr.value);
+    resolveLocal(assignExpr, assignExpr.name);
+    return null;
+}
+```
+
+and function declarations:
+
+```java
+@Override
+public Void visitFunctionStmt(Stmt.Function fnStmt) {
+    // We declare and define functions first
+    // to allow recursion, as discussed above.
+    declare(fnStmt.name);
+    define(fnStmt.name);
+
+    resolveFunction(fnStmt);
+    return null
+}
+
+// A function body defines a new scope, including
+// all the function's parameters. Resolve these in turn.
+private void resolveFunction(Stmt.function function) {
+    beginScope();
+    for (Token param : function.params) {
+        declare(param);
+        define(param);
+    }
+    resolve(function.body);
+    endScope();
+}
+```
+
+* We made `resolveFunction` a separate method, as we'll reuse it to implement class methods later on.
+
+#### Other Syntax Tree Nodes
+
+These aren't too interesting - we just do the obvious thing required to resolve them. For example:
+
+```java
+@Override
+public Void visitIfSmt(Stmt.If ifStmt) {
+    resolve(ifStmt.condition);
+    resolve(ifStmt.thenBranch);
+    if (stmt.elseBranch != null) resolve(stmt.elseBranch);
+    return null;
+}
+```
+
+You get the idea. We resolve any and all subexpressions and sub-statements we can find, once each.
+
+## Interpreting Resolved variables
+
+We now adapt our `Interpreter` to use the information the resolver extracts from the AST.
