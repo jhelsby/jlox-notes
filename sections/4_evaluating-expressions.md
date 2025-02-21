@@ -30,7 +30,7 @@ Note that we don't need to worry about memory management of these values, since 
 
 We could add an `interpret()` method to our `Expr` class, and call it once the parser has constructed each expression, but this approach will get messy as we add more logic to our AST classes.
 
-Instead, we'll use the Visitor pattern we discussed in [Representing Code](/sections/2_representing-code.md#visitors-for-expressions) to add a new `Interpret` class. In that section, we implemented an example use of the Visitor pattern - a Pretty Printer class which recursively traversed our AST and concatenated the string representations of each value in order. Our `Interpret` class will do something similar, except instead of string concatenations, it will compute values. Here it is:
+Instead, we'll use the Visitor pattern we discussed in [Representing Code](/sections/2_representing-code.md#visitors-for-expressions) to add a new `Interpreter` class. In that section, we implemented an example use of the Visitor pattern - a Pretty Printer class which recursively traversed our AST and concatenated the string representations of each value in order. Our `Interpreter` class will do something similar, except instead of string concatenations, it will compute values. Here it is:
 
 > ```java
 > class Interpreter implements Expr.Visitor<Object>
@@ -44,7 +44,7 @@ To apply the Visitor design pattern to our `Interpreter`, we must now:
 
 1. define visit methods for each of our expression tree subclasses - literal, unary, binary, and grouping.
 
-2. use the abstract method `<R> R accept(Visitor<R> visitor)` defined in `Expr` so that we can apply our `Interpret` operation to our expression (no matter which subclass it belongs to).
+2. use the abstract method `<R> R accept(Visitor<R> visitor)` defined in `Expr` so that we can apply our `Interpreter` operation to our expression (no matter which subclass it belongs to).
 
 We can implement (2) immediately:
 
