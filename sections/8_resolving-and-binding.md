@@ -276,8 +276,8 @@ private void resolveLocal(Expr expr, Token name) {
 
     * Note that `scopes` only contains our local scopes, not the global scope. So if we don't find `expr`, we don't store anything - our interpreter will just assume it must be in the global scope instead.
 
+* We'll implement the `Interpreter.resolve` method later. Rest assured that it just stores the number of hops in the interpreter in some sensible way.
+
 * You may be wondering why we're using the parameter `Expr expr` instead of `Expr.Variable varExpr`, like in `visitVariableExpr`.
 
   The reason is that we'll reuse this method to resolve functions, and classes (including `this` and `super`).
-
-* We'll implement the `Interpreter.resolve` method later. Rest assured that it just stores the number of hops in some sensible way.
