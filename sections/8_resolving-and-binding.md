@@ -274,9 +274,9 @@ private void resolveLocal(Expr expr, Token name) {
 
     If it isn't, we check the parent scope, and so on. If we eventually find the name, we store `(expr, number of hops)` in the interpreter.
 
-    * Note that `scopes` only contains our local scopes, not the global scope. So if we don't find `expr`, we don't store anything - our interpreter will just assume it must be in the global scope instead.
+    * We'll implement the `Interpreter.resolve` method later, but all it does is store the key-value pair `(expr, number of hops)` in a `HashMap<Expr, Integer>` field in `Interpreter`.
 
-* We'll implement the `Interpreter.resolve` method later. Rest assured that it just stores the number of hops in the interpreter in some sensible way.
+    * Note that `scopes` only contains our local scopes, not the global scope. So if we don't find `expr`, we don't store anything - our interpreter will just assume it must be in the global scope instead.
 
 * You may be wondering why we're using the parameter `Expr expr` instead of `Expr.Variable varExpr`, like in `visitVariableExpr`.
 
@@ -304,7 +304,7 @@ public Void visitFunctionStmt(Stmt.Function fnStmt) {
     define(fnStmt.name);
 
     resolveFunction(fnStmt);
-    return null
+    return null;
 }
 
 // A function body defines a new scope, including
@@ -341,3 +341,217 @@ You get the idea. We resolve any and all subexpressions and sub-statements we ca
 ## Interpreting Resolved variables
 
 We now adapt our `Interpreter` to use the information the resolver extracts from the AST.
+
+Our `Resolver` stores this in the interpreter with the method `Interpreter.resolve`, which looks like this:
+
+```java
+// New field in Interpreter.
+private final Map<Expr, Integer> locals = new HashMap<>();
+
+void resolve(Expr expr, int depth) {
+    locals.put(expr, depth);
+}
+```
+
+Recall that the lexical scopes our `Resolver` determines statically from the code correspond directly to environments defined dynamically by our interpreter.
+
+We can use our `locals` map to "hop up" to our required environment from the current one. The helper method `ancestor` performs a specified number of hops to retrieve this environment:
+
+```java
+Environment ancestor(int distance) {
+    Environment environment = this;
+    for (int i = 0; i < distance; ++i) {
+        environment = environment.enclosing;
+    }
+
+    return environment;
+}
+```
+
+We can now access a resolved variable in our `locals` map as follows:
+
+```java
+// Modified existing method.
+public Object visitVariableExpr(Expr.Variable varExpr) {
+    return lookupVariable(varExpr.name, varExpr);
+}
+
+// New helper methods:
+
+private Object lookUpVariable(Token name, Expr expr) {
+    Integer distance = locals.get(expr);
+    if (distance != null) {
+        return environments.getAt(distance, name.lexeme);
+    } else {
+        // If we can't find the variable in the local
+        // scope, assume it is in the global scope.
+        // (A runtime error will be thrown if it's not.)
+        return globals.get(name);
+    }
+}
+
+// Get the variable's value from the ancestor environment.
+Object getAt(int distance, String name) {
+    return ancestor(distance).values.get(name);
+}
+```
+
+* As with `resolveLocal` above, we use `Expr expr` in `lookUpVariable` so we can reuse it later to resolve functions, and classes (including methods, `this` and `super`).
+
+* Note how the interpreter assumes that the resolver got it right, and the variable is in the ancestor environment. This implies a deep coupling between `Resolver` and `Interpreter`. If one of them has made a mistake, this coupling will cause problems.
+
+Assigning to resolved variables is similar:
+
+```java
+// Modified existing method.
+public Object visitAssignExpr(Expr.Variable varExpr) {
+    Object value = evaluate(expr.value);
+
+    Integer distance = locals.get(expr);
+    if (distance != null) {
+        environment.assignAt(distance, expr.name, value);
+    } else {
+        // Again, assume the variable is in the global
+        // environment if it's not in the local environments.
+        globals.assign(expr.name, value);
+    }
+
+    return value;
+}
+
+// New helper method. Assign a value to the
+// named variable in the ancestor environment.
+Object assignAt(int distance, Token name, Object value) {
+    ancestor(distance).values.put(name.lexeme, value);
+}
+```
+
+To make our resolver run, we simply add the following lines to our `run()` method in `Lox.java`:
+
+```java
+Resolver resolver = new Resolver(interpreter);
+resolver.resolve(statements);
+
+// Existing code.
+interpreter.interpret(statements);
+```
+
+## Resolution Errors
+
+We can also use our resolver to statically detect and report a few semantic errors.
+
+Lox allows declaring multiple variables in the global scope for convenience purposes, especially in the REPL. But doing so in the local scope:
+
+```java
+{
+    var a = 0;
+    var a = 1;
+}
+```
+is more likely to be an error. If the user intended to reassign, they would probably have written:
+
+```java
+{
+    var a = 0;
+    a = 1;
+}```
+```
+
+And if they forgot they used `a` already, they may not want to overwrite it. We can easily check this in our resolver by updating our `declare` method:
+```java
+private void declare(Token name) {
+    if (scopes.isEmpty()) return;
+    Map<String, Boolean> scope = scopes.peek();
+
+    // New code checking for the error.
+    if (scope.containsKey(name.lexeme)) {
+        Lox.error(name,
+            "Already a variable with this name in this scope");
+    }
+
+    scope.put(name.lexeme, false);
+}
+```
+
+We can also check to avoid top level return statements:
+
+```java
+return "This shouldn't be allowed."
+```
+
+To do so, we will store whether we're inside a function or not as a field in our `Resolver` class:
+
+```java
+private FunctionType currentFunction = FunctionType.NONE;
+
+private enum FunctionType {
+    NONE,
+    FUNCTION
+}
+```
+
+* We'll extend our `FunctionType` enum soon to include classes and the like.
+
+We'll update `currentFunction` whenever we enter or exit a function, as follows:
+
+```java
+@Override
+public Void visitFunctionStmt(Stmt.Function fnStmt) {
+    declare(fnStmt.name);
+    define(fnStmt.name);
+
+    // Add the second parameter here, tracking
+    // that we've entered a new function.
+    resolveFunction(fnStmt, FunctionType.FUNCTION);
+
+    return null;
+}
+
+// Add the new second parameter.
+private void resolveFunction(Stmt.function function, FunctionType type) {
+
+    // Save the current FunctionType so we can
+    // restore it after we've exited this function.
+    FunctionType enclosingFunction = currentFunction;
+
+    // Tell the resolver we've entered a function.
+    currentFunction = type;
+
+    // Old code.
+    beginScope();
+    for (Token param : function.params) {
+        declare(param);
+        define(param);
+    }
+    resolve(function.body);
+    endScope();
+
+    // Restore the old FunctionType.
+    currentFunction = enclosingFunction;
+}
+```
+
+Now we know if we're in a function, we can check this when we encounter a return statement:
+
+```java
+public Void visitReturnStmt(Stmt.Return stmt) {
+    if (currentFunction == FunctionType.NONE) {
+        Lox.error(stmt.keyword, "Can't return from top-level code.");
+    }
+
+    // Old code (which I didn't reproduce above).
+    // ...
+}
+```
+
+Finally - now we're using our resolver for error-checking, there's no point running the interpreter if we find an error. To do this, we can modify `run()` in `Lox.java` again:
+
+```java
+Resolver resolver = new Resolver(interpreter);
+resolver.resolve(statements);
+
+// Stop if there was a resolution error.
+if (hadError) return;
+
+interpreter.interpret(statements);
+```
