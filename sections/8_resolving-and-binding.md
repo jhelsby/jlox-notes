@@ -199,7 +199,7 @@ private void endScope() {
 
 * As with our `Environment`, a scope is a hash map, and its keys are variable names.
 
-  Unlike `Environment`, however, the variable name doesn't map to the variable value - our resolver doesn't work like that. Remember, we're going to store the number of hops, instead.
+  Unlike `Environment`, however, the variable name doesn't map to the variable value - our resolver doesn't work like that. Remember, we're going to store the number of hops instead.
 
   We'll explain what it maps to in just a moment.
 
