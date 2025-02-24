@@ -253,7 +253,7 @@ For example, the print statement on line 3 below causes line 4 to be marked as a
 2      int x = 1;
 3      System.out.println(x) // <- Error: missing semicolon.
 4      int y = x + 1;        // <- Error: unreachable statement.
-}
+5  }
 ```
 
 To get around this, we'll use Panic Mode error recovery in _jlox_. Panic Mode error recovery tries to detect as many syntax errors as it can, while minimising cascading errors. When we encounter an error, we will:
