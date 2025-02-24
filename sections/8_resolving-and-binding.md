@@ -556,6 +556,8 @@ public Void visitReturnStmt(Stmt.Return stmt) {
 }
 ```
 
+We could add some more semantic error checks if we wanted to, but _jlox_ stops here.
+
 Finally - now we're using our resolver for error-checking, there's no point running the interpreter if we find an error. To do this, we can modify `run()` in `Lox.java` again:
 
 ```java
