@@ -184,10 +184,12 @@ void resolve(List<Stmt> statements) {
     }
 }
 
+// Add the block's scope to the top of the stack.
 private void beginScope() {
     scopes.push(new HashMap<String, Boolean>());
 }
 
+// Remove the block's scope from the stack.
 private void endScope() {
     scopes.pop();
 }
