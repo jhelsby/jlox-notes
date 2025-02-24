@@ -156,7 +156,7 @@ private void resolve(Expr expr) {
 }
 ```
 
-As before, this allows our `Interpreter` to apply our visit methods to a given AST node.
+This allows our `Resolver` to apply our visit methods to a given AST node.
 
 Let's implement the actual visit methods now. We'll start with blocks, since they create the local scopes we need to resolve.
 
