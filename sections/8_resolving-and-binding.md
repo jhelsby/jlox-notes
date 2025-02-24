@@ -1,5 +1,13 @@
 # 8. Resolving and Binding
 
+In this section, we implement a `Resolver` class which performs semantic analysis on parsed code before it is interpreted. This will let us:
+
+* fix the problem adding closures introduced. We'll make our scoping lexical again instead of dynamic.
+
+* add some semantic error handling to catch errors. We'll implement checks to catch declaring a variable twice in a local scope, and using a top-level `return` statement.
+
+## Motivation
+
 Recall our scope rule, introduced when we [implemented block statements in Section 5](./5_statements-and-state.md#scope):
 
 > A variable usage refers to the preceding declaration with the same name in the innermost scope that encloses the expression where the variable is used.
