@@ -4,7 +4,7 @@ Recall our scope rule, introduced when we [implemented block statements in Secti
 
 > A variable usage refers to the preceding declaration with the same name in the innermost scope that encloses the expression where the variable is used.
 
-Our interpreter implemented this rule correctly right up until we added closures. For example, the following code currently breaks our rule:
+Our interpreter implemented this rule correctly right up until we added closures, which broke it. For example, the following code currently violates our rule:
 
 ```java
 var a = "global"
