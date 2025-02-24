@@ -265,8 +265,8 @@ public Void visitVariableExpr(Expr.Variable varExpr) {
 `visitVariableExpr` above uses a key helper method, `resolveLocal`:
 
 ```java
-// expr here is some object that
-// can be bound to a name.
+// expr here is some object that can be bound
+// to a name, like a variable or a function.
 // It's not an arbitrary expression.
 private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; --i) {
@@ -280,6 +280,8 @@ private void resolveLocal(Expr expr, Token name) {
     }
 }
 ```
+* This method is called `resolveLocal` because it only resolves local scopes, not the global scope.
+
 * We check if the expression's name is defined in the most local scope. If it is, there are zero hops from the expression to its name. We store `(expr, 0)` in the interpreter.
 
     If it isn't, we check the parent scope, and so on. If we eventually find the name, we store `(expr, number of hops)` in the interpreter.
