@@ -466,7 +466,7 @@ is more likely to be an error. If the user intended to reassign, they would prob
 {
     var a = 0;
     a = 1;
-}```
+}
 ```
 
 And if they forgot they used `a` already, they may not want to overwrite it. We can easily check this in our resolver by updating our `declare` method:
