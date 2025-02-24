@@ -40,7 +40,7 @@ When we call `showA()` for the first time, the environments look like this:
 
 When `showA()` tries to print `a`, it climbs environments until it finds `a` in the global scope, so prints `global`.
 
-But when we call it for the second timee, the environments have changed:
+But when we call it for the second time, the environments have changed:
 
 | Environment | Binding              |
 |------------|----------------------|
@@ -49,9 +49,9 @@ But when we call it for the second timee, the environments have changed:
 | showA()    | Empty.               |
 
 
-When we climb environments to print `a` this time, we find it in the Block scope, so `block` is printed instead.
+Now when `showA()` print `a`, it finds `a` in the Block scope, so `block` is printed.
 
-There are a few ways to approach this, but some require making extensive modifications to our existing implementation. Nystrom opts for an educational (albeit inefficient) approach which works with what we've got.
+There are a few ways to fix this, but some require extensively modifying our existing implementation. Nystrom opts for an educational - albeit inefficient - approach which works with what we've got.
 
 ## Semantic Analysis
 
