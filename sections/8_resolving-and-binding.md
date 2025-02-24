@@ -142,7 +142,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 }
 ```
 
-We now need to write visit methods to resolve each statement and expression we've defined, as per the rules given above. Check [Visitor Pattern Basics](./4_evaluating-expressions.md#visitor-pattern-basics) back in Section 4 for a refresher. What we're doing here is very similar, except we want to resolve our statements and expressions instead of evaluate them.
+We now need to write visit methods to resolve each statement and expression we've defined, as per the rules given above. Check [Visitor Pattern Basics](./4_evaluating-expressions.md#visitor-pattern-basics) back in Section 4 for a refresher - what we're doing here is very similar, except we want to resolve our statements and expressions instead of evaluate them.
 
 The equivalent of our `evaluate` method is:
 
