@@ -7,7 +7,7 @@ Recall our scope rule, introduced when we [implemented block statements in Secti
 Our interpreter implemented this rule correctly right up until we added closures, which broke it. For example, the following code currently violates our rule:
 
 ```java
-var a = "global"
+var a = "global";
 {
     fun showA() {
         print a;
@@ -23,7 +23,7 @@ It prints:
 global
 block
 ```
-instead of:
+instead of the rule-specified:
 ```
 global
 global
@@ -31,18 +31,23 @@ global
 
 When we call `showA()` for the first time, the environments look like this:
 
-|Global|Block|showA()|
-|-|-|-|
-|`a -> "global"`|`showA -> <fn showA>`|Empty.|
+| Environment | Binding |
+|------------|-------------------------|
+| Global     | `a -> "global"`         |
+| Block      | `showA -> <fn showA>`   |
+| showA()    | Empty.                  |
+
 
 When `showA()` tries to print `a`, it climbs environments until it finds `a` in the global scope, so prints `global`.
 
 But when we call it for the second timee, the environments have changed:
 
-|Global|Block|showA()|
-|-|-|-|
-|`a -> "global"`|`showA -> <fn showA>`|Empty.|
-||`a -> "block"`||
+| Environment | Binding              |
+|------------|----------------------|
+| Global     | `a -> "global"`      |
+| Block      | `showA -> <fn showA>` <br> `a -> "block"` |
+| showA()    | Empty.               |
+
 
 When we climb environments to print `a` this time, we find it in the Block scope, so `block` is printed instead.
 
@@ -56,10 +61,11 @@ We're now going to implement a `Resolver` class, which will conduct semantic ana
 
 We'll store the resolution in way that works with our existing code: for each variable, we'll store the number of environments we have to "hop" to find the variable's value. In our example above:
 
-|Global|Block|showA()|
-|-|-|-|
-|`a -> "global"`|`showA -> <fn showA>`|Empty.|
-||`a -> "block"`||
+| Environment | Binding                |
+|------------|------------------------|
+| Global     | `a -> "global"`        |
+| Block      | `showA -> <fn showA>`  <br> `a -> "block"` |
+| showA()    | Empty.                 |
 
 if we're in the `showA` scope, we're one hop away from `a = block`, and two hops away from `a = global`. If we want `a = global`, we'd store "two hops".
 
