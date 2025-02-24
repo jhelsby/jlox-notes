@@ -262,7 +262,7 @@ public Void visitVariableExpr(Expr.Variable varExpr) {
 
   When we _declare_ a variable, we store it in `scopes` with the key-value pair `(variable name, false)`. When we _define_ that variable, we change that mapping to `(variable name, true)`, to indicate a successful definition.
 
-`visitVariableExpr` above used a key method, `resolveLocal`:
+`visitVariableExpr` above uses a key helper method, `resolveLocal`:
 
 ```java
 // expr here is some object that
