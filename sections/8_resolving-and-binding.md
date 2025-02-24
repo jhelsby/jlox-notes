@@ -77,9 +77,9 @@ In our example above, if we're in the `showA` scope and want `a = global`, we'd 
 
 ## Our Resolver's Approach
 
-Traditionally, we'd put this resolving information in the parser. It's a static property based on the structure of the source code. And for _clox_, this is what we'll do.
+Traditionally, we'd put this resolving information in the parser: it's a static property based on the structure of the source code. We'll do this for _clox_.
 
-But to demonstrate another technique, Nystrom implements it as a separate pass for _jlox_ - after the parser, but before the interpreter.
+But to demonstrate another technique, Nystrom implements the resolver as a separate pass for _jlox_ - after the parser, but before the interpreter.
 
 Our variable resolution pass works like a mini-interpreter, but without side effects or control flow. We walk our AST and visit every node in turn - but we don't run anything. All we do is calculate the number of hops from each variable declaration to its value. For this reason, it has O(_n_) complexity where _n_ is the number of AST nodes.
 
@@ -128,8 +128,6 @@ Here are the rules:
 The code for our `Resolver` class is a little complicated, so I'm going to reproduce quite a bit of it, with comments and annotations. It starts simply enough:
 
 ```java
-package com.craftinginterpreters.lox;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
