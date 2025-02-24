@@ -59,17 +59,21 @@ _Resolving_ a variable is when we determine the value associated with that varia
 
 We're now going to implement a `Resolver` class, which will conduct semantic analysis on parsed input and resolve all our variable bindings in a manner consistent with our scope rule.
 
-We'll store the resolution in way that works with our existing code: for each variable, we'll store the number of environments we have to "hop" to find the variable's value. In our example above:
+We'll store the resolution in way that works with our existing code:
 
-| Environment | Binding                |
-|------------|------------------------|
-| Global     | `a -> "global"`        |
-| Block      | `showA -> <fn showA>`  <br> `a -> "block"` |
-| showA()    | Empty.                 |
+> For each variable, store the number of environments we have to "hop" to find the variable's value.
+>
+> The nested environments combined with the number of hops completely specify the value a variable should be resolved to.
 
-if we're in the `showA` scope, we're one hop away from `a = block`, and two hops away from `a = global`. If we want `a = global`, we'd store "two hops".
+In our example above, if we're in the `showA` scope and want `a = global`, we'd store "two hops":
 
-The nested environments together with the number of hops completely specify the value a variable should be resolved to.
+| Environment | Binding               | Hops from showA()|
+|------------|------------------------|-------|
+| Global     | `a -> "global"`        |2
+| Block      | `showA -> <fn showA>`  <br> `a -> "block"` | 1
+| showA()    | Empty.                 | 0
+
+
 
 ## Our Resolver's Approach
 
