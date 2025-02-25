@@ -203,5 +203,7 @@ I shan't reproduce the parsing or visit methods as they are similar to the other
     (a.b.c.d.e.f).g = "test";
     ```
 
+* Our `visitSetExpr()` method evaluates the object, raises an error if the object isn't a class, and then evalutes the value. This can be user visible, so in theory we should specify this in Lox documentation somewhere.
+
 ## Methods on Classes
 
