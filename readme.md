@@ -18,5 +18,5 @@ Unless otherwise stated, the code described below is defined within the package 
 6. [Control Flow](/sections/6_control-flow.md)
 7. [Functions](/sections/7_functions.md)
 8. [Resolving and Binding](/sections/8_resolving-and-binding.md)
-9. Classes
+9. [Classes](/sections/9_classes.md)
 10. Inheritance
