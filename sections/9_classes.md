@@ -207,3 +207,144 @@ I shan't reproduce the parsing or visit methods as they are similar to the other
 
 ## Methods on Classes
 
+We now have getters (`.`), and implemented function calls (`()`) in [Section 7](./7_functions.md). Our method calls just chain these together:
+
+```java
+foo.bar()
+```
+
+Additionally, we want to pull these expressions apart, as follows:
+```java
+var foo = object.method;
+foo(); // This should call object.method().
+```
+
+or:
+
+```java
+class SomeClass {}
+
+fun someFunction(argument) {
+    print "Some " + argument;
+}
+
+var instance = SomeClass();
+instance.function = someFunction;
+instance.function("argument"); // Should call someFunction("argument").
+```
+
+There are some other edge cases to worry about, but we'll get to them in [the next subsection](#this). FOr now, we'll just get basic method calls working.
+
+For our `Resolver`, we'll add a new `FunctionType.METHOD` enum value (to contrast with `FunctionType.FUNCTION`, used to resolve functions), then update our `visitClassStmt` accordingly:
+
+```java
+for (Stmt.Function method : stmt.methods)  {
+    resolveFunction(method, FunctionType.METHOD);
+}
+```
+
+We'll add a new `methods` hash map to our `LoxClass` class to store each of our methods:
+
+```java
+
+private final Map<String, LoxFunction> methods;
+
+LoxClass(String name, Map<String, LoxFunction> methods) {
+    this.name = name;
+    this.methods = methods;
+}
+```
+
+To add methods to `LoxClass` (our runtime representation of a class), we our `visitClassStmt` in our `Interpreter` as follows:
+
+```java
+@Override
+public Void visitClassStmt(Sttmt.Class classStmt) {
+    environment.define(stmt.name.lexeme, null);
+
+    // New code.
+    Map<String, LoxFunction> methods = new HashMap<>();
+    for (Stmt.Function method : stmt.methods)  {
+        LoxFunction function = new LoxFunction(method, environment);
+        methods.put(method.name.lexeme, function);
+    }
+    LoxClass klass = new LoxClass(stmt.name.lexeme, methods);
+
+
+    environment.assign(stmt.name, klass);
+    return null;
+}
+```
+
+Finally, we only access methods through instances (there are no static methods in Lox). This is straightforward - first, we add a lookup method in `LoxClass`:
+
+```java
+LoxFunction findMethod(String name) {
+    if (methods.containsKey(name)) {
+        return methods.get(name);
+    }
+
+    return null;
+}
+```
+
+Then we update the `get` method in `LoxInstance` to use `findMethod`.
+
+* Note that in this implementation, we first try to get a field with the given name. If this is unsuccessful, we try to get a method with that name. This means that fields shadow methods.
+
+## This
+
+We now want to implement the following behaviour:
+
+```java
+class SomeClass() {
+    someMethod() {
+        print this.field;
+    }
+}
+
+var instance1 = Person();
+instance1.field = "Field 1";
+
+var instance2 = Person();
+instance2.field = "Field 2";
+
+var method = instance1.someMethod;
+method(); // This should print "Field 1" because
+          // we grabbed the method from instance1.
+
+instance2.someMethod = instance1.someMethod;
+instance2.someMethod(); // This should print "Field 1" because
+                        // we first grabbed the method from instance1.
+                        // (Even though it's now in instance2.)
+```
+
+In other words, we want our methods to be bound to the instance they were first accessed from. In Python, these are known as _bound methods_.
+
+Conceptually, the following idea will give us the result we want:
+
+* First, add a `this` keyword which evaluates to the instance the method is bound to. This is similar to `this` in Java or `self` in Python.
+
+* Next, when we grab a method from an instance, set it up to have access to a variable `this`, which stores the instance. For example, consider:
+
+    ```java
+    class SomeClass {
+        someMethod() {
+            print this.field;
+        }
+    }
+    var instance = SomeClass()
+    instance.field = "Hello."
+
+    var function = instance.someMethod
+    ```
+
+    We somehow want to make `function` work like this:
+    ```java
+    fun function() {
+        this = instance;
+        print this.field;
+    }
+    ```
+    
+It turns out this can be done very straightforwardly using our existing implementation, using closures.
