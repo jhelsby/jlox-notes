@@ -19,4 +19,4 @@ Unless otherwise stated, the code described below is defined within the package 
 7. [Functions](/sections/7_functions.md)
 8. [Resolving and Binding](/sections/8_resolving-and-binding.md)
 9. [Classes](/sections/9_classes.md)
-10. Inheritance
+10. [Inheritance](/sections/10_inheritance.md)

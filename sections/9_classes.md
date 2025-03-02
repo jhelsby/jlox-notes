@@ -57,7 +57,7 @@ The `Interpreter` visit method creates an Java instance of `LoxClass`.
 
 ```java
 @Override
-public Void visitClassStmt(Sttmt.Class classStmt) {
+public Void visitClassStmt(Stmt.Class classStmt) {
     environment.define(stmt.name.lexeme, null);
     LoxClass klass = new LoxClass(stmt.name.lexeme);
     environment.assign(stmt.name, klass);
@@ -294,6 +294,8 @@ Then we update the `get` method in `LoxInstance` to use `findMethod`.
 
 ## This
 
+### Concept
+
 We now want to implement the following behaviour:
 
 ```java
@@ -347,4 +349,156 @@ Conceptually, the following idea will give us the result we want:
     }
     ```
     
-It turns out this can be done very straightforwardly using our existing implementation, using closures.
+It turns out this can be done very straightforwardly using our existing implementation, using closures. Every time we create an instance:
+```java
+var instance = SomeClass();
+```
+we create a new environment for `instance` containing the binding
+
+```
+this -> instance
+```
+
+Now, when we evaluate 
+```java
+instance.someMethod;
+```
+it creates a LoxFunction for `someMethod` _inside_ the `instance` environment. Hence, the LoxFunction can access `this`, and `this` will resolve to `instance` even if we reassigned it to some other variable or class:
+calling this
+
+```java
+var variable = instance.someMethod;
+
+instance2 = SomeClass();
+instance2.someMethod = instance.someMethod;
+
+// Both statements call someMethod, and 'this'
+// resolves to `instance` in both cases.
+variable();
+instance2.someMethod();
+```
+
+### Implementation
+
+Because we are reusing our environment implementation, this approach can be handled in a handful of lines. Our AST node for `this`:
+
+```java
+This : Token keyword
+```
+
+We update our parser's `primary()` method by adding:
+```java
+if (match(THIS)) return new Expr.This(previous());
+```
+
+In our resolver, we add a `visitThisExpr` method which resolves `this` just like any other variable:
+
+```java
+@Override
+public Void visitThisExpr(Expr.This expr) {
+    resolveLocal(expr, expr.keyword);
+    return null;
+}
+```
+
+Then, we adapt our resolver's `visitClassStmt` method to add `this` in the class environment - so when we encounter `this` in a class method, it will resolve to a "local variable" in an implicit parent scope of the method body:
+
+```java
+// Before we resolve the method body:
+beginScope();
+scope.peek().put("this", true);
+
+// Resolve the method body next.
+// ...
+
+// After we resolve the method body:
+endScope();
+return null;
+```
+
+Recall that our resolver's scopes and our interpreter's environments are tightly coupled, so a change in scope logic means we must change the environment logic.
+
+First, we update LoxInstance so that, after retrieving the method code, it binds `this` to the current instance:
+
+```java
+public class LoxInstance {
+
+    // ...
+
+    Object get(Token name) {
+        // Code to get a field, if it exists
+        // ...
+
+        // Old code, retrieving the method, if it exists.
+        LoxFunction method = klass.findMethod(name.lexeme);
+
+        // New code, binding the LoxInstance to
+        // the retrieved method's environment.
+        if (method != null) return method.bind(this);
+
+        // Old code, throwing an error 
+        // if no property could be found.
+    }
+}
+```
+
+`method.bind` is a new method we add in `LoxFunction`:
+
+```java
+LoxFunction bind(LoxInstance instance) {
+    Environment environment = new Environment(closure);
+    environment.define("this", instance);
+    return new LoxFunction(declaration, environment);
+}
+```
+
+It works exactly as you would expect - it creates the new environment within the existing closure, and creates the binding `this -> instance`. Then it returns a LoxFunction with the method's body and the new environment.
+
+Finally, our interpreter visits `this` just like it would any other variable - our resolver did all of the work:
+```java
+@Override
+public Object visitThisExpr(Expr.This expr) {
+    return lookUpVariable(expr.keyword, expr);
+}
+```
+
+### Resolution Errors
+
+In the [previous section](./8_resolving-and-binding.md#resolution-errors), we added some semantic error detection so that top-level return statements are reported as an error. We can now add similar logic to report an error if `this` is used outside of a method.
+
+The implementation is near-identical to the return statement error handling, so I wo't repeat it here. The only note is that we add a new enum to our resolver to help detect if we're in a class or not:
+
+```java
+private enum ClassType {
+    NONE,
+    CLASS
+}
+```
+
+## Constructors and Initialisers
+
+Last step now! Constructing an object is a pair of operations:
+
+1. Allocating the memory required for a fresh instance.
+2. Initialising the instance with some given values.
+
+For _jlox_, Java handles (1) for us. So adding constructors here is more about (2). The implementation is quite straightforward, so I won't reproduce it here. In brief:
+
+* Update the `LoxClass` methods `call()` and `arity()` so that when you create an instance, it checks if the class contains a method with the name `init`. If it does, bind `init` to the instance and forward its arguments to the method call.
+
+* To make _clox_ easier to implement, we want `init()` methods to always return `this`. 
+
+  Update the `LoxFunction` class accordingly:
+
+  * Add an `isInitializer` field which is true if the LoxFunction is a method called `init` and false otherwise.
+  * Update its `call()` method to return `closure.getAt(0, "this")` if `isInitializer` is true.
+
+  * Update `call()` so it also returns `this` if it encounters an empty return statement. This is useful when we want to terminate our `init` method early.
+
+  Update the `Resolver` class too, so trying to return anything else in an initializer does nothing:
+
+  * Add a `FunctionType.INITIALIZER` enum value and modify `visitClassStmt()` to set it when appropriate.
+
+  * Modify `visitReturnStmt()` to report an error if you try and return a value when `FunctionType.INITIALIZER` is set.
+
+One last step to go in our _jlox_ implementation - extending our classes to support inheritance. We'll do that in the [next and final section](./10_inheritance.md).
