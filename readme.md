@@ -1,6 +1,6 @@
 # Crafting Interpreters - jlox Notes
 
-This repository contains my notes on the _jlox_ interpreter described in [Crafting Interpreters](https://craftinginterpreters.com/) (2021), by Robert Nystrom. Once I complete them, I plan to implement my own interpreter based on _clox_, the book's more efficient C-based interpreter.
+This repository contains my notes on the _jlox_ interpreter described in [Crafting Interpreters](https://craftinginterpreters.com/) (2021), by Robert Nystrom. My implementation of _clox_, the book's more efficient C-based interpreter, can be found [here](https://github.com/jhelsby/clox).
 
 _jlox_ and _clox_ interpret the book's language, Lox. Lox is a simple, dynamically typed, object-oriented language. Its built-in data types are booleans, numbers, strings, and nil.
 
